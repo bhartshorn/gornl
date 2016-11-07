@@ -75,7 +75,6 @@ func main() {
 	http.HandleFunc("/"+rootPath+"/", viewHandler)
 	http.HandleFunc("/edit/", editHandler)
 	http.HandleFunc("/save/", saveHandler)
-	http.HandleFunc("/go/", goHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.ListenAndServe(":8080", nil)
 }
@@ -85,16 +84,6 @@ func renderTemplate(w http.ResponseWriter, tmpl string, j *Journal) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-}
-
-func goHandler(w http.ResponseWriter, r *http.Request) {
-	name := r.FormValue("name")
-	if name != "" {
-		http.Redirect(w, r, "/view/"+name, http.StatusFound)
-	} else {
-		http.Redirect(w, r, "/view/front", http.StatusFound)
-	}
-
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
