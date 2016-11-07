@@ -12,6 +12,16 @@ import (
 	"time"
 )
 
+var (
+	templates = template.Must(template.ParseFiles(
+		"tmpl/header.html",
+		"tmpl/footer.html",
+		"tmpl/edit.html",
+		"tmpl/view.html"))
+	rootPath  = "journal"
+	validPath = regexp.MustCompile(("^/" + rootPath + "/(\\w{1,20})$"))
+)
+
 type Entry struct {
 	Date  time.Time
 	Title string
@@ -61,23 +71,6 @@ func loadJournal(name string) (*Journal, error) {
 	}
 	return &journal, nil
 }
-
-type Page struct {
-	Name  string
-	Title string
-	Body  string
-}
-
-var (
-	templates = template.Must(template.ParseFiles(
-		"tmpl/header.html",
-		"tmpl/footer.html",
-		"tmpl/edit.html",
-		"tmpl/view.html"))
-	rootPath  = "journal"
-	validPath = regexp.MustCompile(("^/" + rootPath + "/(\\w{1,20})$"))
-)
-
 func main() {
 	http.HandleFunc("/"+rootPath+"/", viewHandler)
 	http.HandleFunc("/edit/", editHandler)
@@ -139,14 +132,8 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/view/"+name, http.StatusFound)
 	} else {
 		body := r.FormValue("body")
-		title := r.FormValue("title")
-		p := &Page{Name: name, Title: title, Body: body}
-		err = p.save()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		http.Redirect(w, r, "/view/"+name, http.StatusFound)
+		log.Println(body)
+		http.Redirect(w, r, "/"+rootPath+"/"+name, http.StatusFound)
 	}
 }
 
@@ -160,10 +147,6 @@ func getName(w http.ResponseWriter, r *http.Request) (string, error) {
 	return m[1], nil
 }
 
-func (p *Page) save() error {
+func (j *Journal) save() error {
 	return nil
-}
-
-func loadPage(name string) (*Page, error) {
-	return &Page{}, nil
 }
