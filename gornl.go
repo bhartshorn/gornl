@@ -19,7 +19,7 @@ var (
 		"tmpl/edit.html",
 		"tmpl/view.html"))
 	rootPath  = "journal"
-	validPath = regexp.MustCompile(("^/" + rootPath + "/(\\w{1,20})$"))
+	validPath = regexp.MustCompile(("^/" + rootPath + "/(?:save/)?(\\w{1,20})$"))
 )
 
 type Entry struct {
@@ -63,8 +63,6 @@ func loadJournal(name string) (*Journal, error) {
 			}
 			entry.Body += scanner.Text()
 		}
-		log.Println("----- New Entry ----")
-		log.Println(entry)
 
 		// Add the entry to the entries
 		journal.Entries = append(journal.Entries, entry)
@@ -72,9 +70,9 @@ func loadJournal(name string) (*Journal, error) {
 	return &journal, nil
 }
 func main() {
+	http.HandleFunc("/"+rootPath+"/save/", saveHandler)
 	http.HandleFunc("/"+rootPath+"/", viewHandler)
 	http.HandleFunc("/edit/", editHandler)
-	http.HandleFunc("/save/", saveHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.ListenAndServe(":8080", nil)
 }
@@ -117,17 +115,12 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.FormValue("submit") == "Cancel" {
-		http.Redirect(w, r, "/view/"+name, http.StatusFound)
-	} else {
-		body := r.FormValue("body")
-		log.Println(body)
-		http.Redirect(w, r, "/"+rootPath+"/"+name, http.StatusFound)
-	}
+	body := r.FormValue("body")
+	log.Println(body)
+	http.Redirect(w, r, "/"+rootPath+"/"+name, http.StatusFound)
 }
 
 func getName(w http.ResponseWriter, r *http.Request) (string, error) {
-	log.Println(r.URL.Path)
 	m := validPath.FindStringSubmatch(r.URL.Path)
 	if m == nil {
 		http.NotFound(w, r)
