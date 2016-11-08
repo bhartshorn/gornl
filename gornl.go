@@ -27,6 +27,25 @@ type Journal struct {
 	Entries []Entry
 }
 
+func (j *Journal) Save() error {
+	file, err := os.Open("journals/" + j.Name + ".txt")
+	log.Println("---- Opening " + j.Name + ".txt ----")
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer file.Close()
+	writer := bufio.NewWriter(file)
+
+	for _, entry := range j.Entries {
+		log.Println(entry)
+		writer.WriteString("TEST")
+		writer.WriteString("\n\n")
+	}
+	writer.Flush()
+	return nil
+}
+
 func loadJournal(name string) (*Journal, error) {
 	file, err := os.Open("journals/" + name + ".txt")
 	if err != nil {
@@ -79,6 +98,10 @@ var (
 )
 
 func main() {
+	testJournal, _ := loadJournal("test")
+	testJournal.Name = "fail"
+	testJournal.Save()
+
 	http.HandleFunc("/"+rootPath+"/", viewHandler)
 	http.HandleFunc("/edit/", editHandler)
 	http.HandleFunc("/save/", saveHandler)
