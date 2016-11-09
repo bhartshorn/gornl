@@ -134,10 +134,15 @@ func editHandler(w http.ResponseWriter, r *http.Request) {
 func saveHandler(w http.ResponseWriter, r *http.Request) {
 	name, err := getName(w, r)
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	journal, _ := loadJournal(name)
+	journal, err := loadJournal(name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	split := splitSentence.FindStringSubmatch(r.FormValue("body"))
 
@@ -145,12 +150,8 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 
 	journal.Entries = append(journal.Entries, entry)
 
-	log.Println(journal)
+	journal.Save()
 
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 	http.Redirect(w, r, "/"+rootPath+"/"+name, http.StatusFound)
 }
 
