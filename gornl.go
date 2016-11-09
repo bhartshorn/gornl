@@ -12,6 +12,18 @@ import (
 	"time"
 )
 
+var (
+	templates = template.Must(template.ParseFiles(
+		"tmpl/header.html",
+		"tmpl/footer.html",
+		"tmpl/edit.html",
+		"tmpl/view.html"))
+	rootPath      = "journal"
+	validPath     = regexp.MustCompile(("^/" + rootPath + "/(\\w{1,20})$"))
+	firstSentence = regexp.MustCompile("^(?U:.*)[.?!]")
+	testString    = "This is a sentence. And another sentence (hopefully). Plus a third!"
+)
+
 type Entry struct {
 	Date  time.Time
 	Title string
@@ -19,7 +31,7 @@ type Entry struct {
 }
 
 func (e Entry) String() string {
-	return fmt.Sprintf("%s %s\n%s", e.Date, e.Title, e.Body)
+	return fmt.Sprintf("%s %s\n%s", e.Date.Format("2006-01-02 15:04"), e.Title, e.Body)
 }
 
 type Journal struct {
@@ -28,21 +40,20 @@ type Journal struct {
 }
 
 func (j *Journal) Save() error {
-	file, err := os.Open("journals/" + j.Name + ".txt")
+	file, err := os.Create("journals/" + j.Name + ".txt")
 	log.Println("---- Opening " + j.Name + ".txt ----")
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 	defer file.Close()
-	writer := bufio.NewWriter(file)
 
 	for _, entry := range j.Entries {
-		log.Println(entry)
-		writer.WriteString("TEST")
-		writer.WriteString("\n\n")
+		n, err := file.WriteString(entry.String())
+		file.WriteString("\n\n")
+		log.Printf("Wrote %d bytes. Err: %s\n", n, err)
 	}
-	writer.Flush()
+	file.Sync()
 	return nil
 }
 
@@ -87,21 +98,7 @@ type Page struct {
 	Body  string
 }
 
-var (
-	templates = template.Must(template.ParseFiles(
-		"tmpl/header.html",
-		"tmpl/footer.html",
-		"tmpl/edit.html",
-		"tmpl/view.html"))
-	rootPath  = "journal"
-	validPath = regexp.MustCompile(("^/" + rootPath + "/(\\w{1,20})$"))
-)
-
 func main() {
-	testJournal, _ := loadJournal("test")
-	testJournal.Name = "fail"
-	testJournal.Save()
-
 	http.HandleFunc("/"+rootPath+"/", viewHandler)
 	http.HandleFunc("/edit/", editHandler)
 	http.HandleFunc("/save/", saveHandler)
@@ -158,19 +155,21 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.FormValue("submit") == "Cancel" {
-		http.Redirect(w, r, "/view/"+name, http.StatusFound)
-	} else {
-		body := r.FormValue("body")
-		title := r.FormValue("title")
-		p := &Page{Name: name, Title: title, Body: body}
-		err = p.save()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		http.Redirect(w, r, "/view/"+name, http.StatusFound)
+	//journal, _ := loadJournal(name)
+
+	body := r.FormValue("body")
+	title := firstSentence.FindString(body)
+	date := time.Now()
+
+	entry := Entry{date, title, body}
+
+	log.Println(entry)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+	http.Redirect(w, r, "/view/"+name, http.StatusFound)
 }
 
 func getName(w http.ResponseWriter, r *http.Request) (string, error) {
