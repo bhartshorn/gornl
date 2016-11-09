@@ -19,8 +19,9 @@ var (
 		"tmpl/edit.html",
 		"tmpl/view.html"))
 	rootPath      = "journal"
-	firstSentence = regexp.MustCompile("^(?U:.*)[.?!]")
+	splitSentence = regexp.MustCompile("^(.*?[.?!])\\s*(.*)$")
 	validPath     = regexp.MustCompile(("^/" + rootPath + "/(?:save/)?(\\w{1,20})$"))
+	testLine      = "This. is a multiple. sentence. body. Just trust me on this!"
 )
 
 type Entry struct {
@@ -90,6 +91,7 @@ func loadJournal(name string) (*Journal, error) {
 }
 
 func main() {
+	log.Printf("%q\n", splitSentence.FindStringSubmatch(testLine))
 	http.HandleFunc("/"+rootPath+"/save/", saveHandler)
 	http.HandleFunc("/"+rootPath+"/", viewHandler)
 	http.HandleFunc("/edit/", editHandler)
@@ -135,15 +137,15 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//journal, _ := loadJournal(name)
+	journal, _ := loadJournal(name)
 
-	body := r.FormValue("body")
-	title := firstSentence.FindString(body)
-	date := time.Now()
+	split := splitSentence.FindStringSubmatch(r.FormValue("body"))
 
-	entry := Entry{date, title, body}
+	entry := Entry{time.Now(), split[1], split[2]}
 
-	log.Println(entry)
+	journal.Entries = append(journal.Entries, entry)
+
+	log.Println(journal)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -159,8 +161,4 @@ func getName(w http.ResponseWriter, r *http.Request) (string, error) {
 		return "", errors.New("Invalid Journal Name")
 	}
 	return m[1], nil
-}
-
-func (j *Journal) save() error {
-	return nil
 }
