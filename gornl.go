@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"html/template"
 	"log"
 	"net/http"
@@ -21,7 +22,6 @@ var (
 	rootPath      = "journal"
 	splitSentence = regexp.MustCompile("^(.*?[.?!])\\s*(.*)$")
 	validPath     = regexp.MustCompile(("^/" + rootPath + "/(?:save/)?(\\w{1,20})$"))
-	testLine      = "This. is a multiple. sentence. body. Just trust me on this!"
 )
 
 type Entry struct {
@@ -91,7 +91,11 @@ func loadJournal(name string) (*Journal, error) {
 }
 
 func main() {
-	log.Printf("%q\n", splitSentence.FindStringSubmatch(testLine))
+	viper.AddConfigPath("config")
+	viper.SetConfigName("gornl")
+	viper.SetDefault("ServerPort", "8080")
+	viper.SetDefault("ServerPath", "journal")
+
 	http.HandleFunc("/"+rootPath+"/save/", saveHandler)
 	http.HandleFunc("/"+rootPath+"/", viewHandler)
 	http.HandleFunc("/edit/", editHandler)
