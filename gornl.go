@@ -19,9 +19,8 @@ var (
 		"tmpl/edit.html",
 		"tmpl/view.html"))
 	rootPath      = "journal"
-	validPath     = regexp.MustCompile(("^/" + rootPath + "/(\\w{1,20})$"))
 	firstSentence = regexp.MustCompile("^(?U:.*)[.?!]")
-	testString    = "This is a sentence. And another sentence (hopefully). Plus a third!"
+	validPath     = regexp.MustCompile(("^/" + rootPath + "/(?:save/)?(\\w{1,20})$"))
 )
 
 type Entry struct {
@@ -83,8 +82,6 @@ func loadJournal(name string) (*Journal, error) {
 			}
 			entry.Body += scanner.Text()
 		}
-		log.Println("----- New Entry ----")
-		log.Println(entry)
 
 		// Add the entry to the entries
 		journal.Entries = append(journal.Entries, entry)
@@ -92,17 +89,10 @@ func loadJournal(name string) (*Journal, error) {
 	return &journal, nil
 }
 
-type Page struct {
-	Name  string
-	Title string
-	Body  string
-}
-
 func main() {
+	http.HandleFunc("/"+rootPath+"/save/", saveHandler)
 	http.HandleFunc("/"+rootPath+"/", viewHandler)
 	http.HandleFunc("/edit/", editHandler)
-	http.HandleFunc("/save/", saveHandler)
-	http.HandleFunc("/go/", goHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.ListenAndServe(":8080", nil)
 }
@@ -112,16 +102,6 @@ func renderTemplate(w http.ResponseWriter, tmpl string, j *Journal) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-}
-
-func goHandler(w http.ResponseWriter, r *http.Request) {
-	name := r.FormValue("name")
-	if name != "" {
-		http.Redirect(w, r, "/view/"+name, http.StatusFound)
-	} else {
-		http.Redirect(w, r, "/view/front", http.StatusFound)
-	}
-
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
@@ -169,11 +149,10 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, "/view/"+name, http.StatusFound)
+	http.Redirect(w, r, "/"+rootPath+"/"+name, http.StatusFound)
 }
 
 func getName(w http.ResponseWriter, r *http.Request) (string, error) {
-	log.Println(r.URL.Path)
 	m := validPath.FindStringSubmatch(r.URL.Path)
 	if m == nil {
 		http.NotFound(w, r)
@@ -182,10 +161,6 @@ func getName(w http.ResponseWriter, r *http.Request) (string, error) {
 	return m[1], nil
 }
 
-func (p *Page) save() error {
+func (j *Journal) save() error {
 	return nil
-}
-
-func loadPage(name string) (*Page, error) {
-	return &Page{}, nil
 }

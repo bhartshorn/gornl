@@ -1,11 +1,10 @@
 {{ template "header.html" . }}
 	<body>
 		<h1>{{.Name}}</h1>
-		<form action="/save/{{.Name}}" method="POST">
+		<form action="save/{{.Name}}" method="POST">
 			<label for="body">New Entry Body:</label>
 			<textarea name="body" rows="20" cols="80"></textarea><br />
 			<input type="submit" name="submit" value="Save" />
-			<input type="submit" name="submit" value="Cancel" />
 		</form> 
 
 		{{range .Entries}}
