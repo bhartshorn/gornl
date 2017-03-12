@@ -1,11 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -35,8 +36,18 @@ func (e Entry) String() string {
 }
 
 type Journal struct {
-	Name    string
-	Entries []Entry
+	Name     string
+	Entries  []Entry
+	Username string
+	Password string
+}
+
+func (j Journal) Yaml() []byte {
+	yamlOutput, err := yaml.Marshal(&j)
+	if err != nil {
+		return nil
+	}
+	return yamlOutput
 }
 
 func (j *Journal) Save() error {
@@ -48,45 +59,53 @@ func (j *Journal) Save() error {
 	}
 	defer file.Close()
 
-	for _, entry := range j.Entries {
-		n, err := file.WriteString(entry.String())
-		file.WriteString("\n\n")
-		log.Printf("Wrote %d bytes. Err: %s\n", n, err)
-	}
+	file.Write(j.Yaml())
+
+	/*
+		for _, entry := range j.Entries {
+			n, err := file.WriteString(entry.String())
+			file.WriteString("\n\n")
+			log.Printf("Wrote %d bytes. Err: %s\n", n, err)
+		}
+	*/
 	file.Sync()
 	return nil
 }
 
 func loadJournal(name string) (*Journal, error) {
-	file, err := os.Open("journals/" + name + ".txt")
+	raw, err := ioutil.ReadFile("journals/" + name + ".txt")
 	if err != nil {
 		return &Journal{}, err
 	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	journal := Journal{Name: name}
+	/*
+		defer file.Close()
+		scanner := bufio.NewScanner(file)
+		journal := Journal{Name: name}
 
-	// While Scanner can open a new line
-	for scanner.Scan() {
-		// At the beginning of this loop, should always be the beginning of an entry
-		entry := Entry{}
+		// While Scanner can open a new line
+		for scanner.Scan() {
+			// At the beginning of this loop, should always be the beginning of an entry
+			entry := Entry{}
 
-		entry.Date, err = time.Parse("2006-01-02 15:04", scanner.Text()[0:16])
-		entry.Title = scanner.Text()[17:len(scanner.Text())]
+			entry.Date, err = time.Parse("2006-01-02 15:04", scanner.Text()[0:16])
+			entry.Title = scanner.Text()[17:len(scanner.Text())]
 
-		// We got the date & title, now get the body. It may be on
-		// multiple lines.
-		for scanner.Scan() && len(scanner.Text()) != 0 {
-			// If it is in multiple lines, we will probably need to add a space
-			if len(entry.Body) > 0 {
-				entry.Body += " "
+			// We got the date & title, now get the body. It may be on
+			// multiple lines.
+			for scanner.Scan() && len(scanner.Text()) != 0 {
+				// If it is in multiple lines, we will probably need to add a space
+				if len(entry.Body) > 0 {
+					entry.Body += " "
+				}
+				entry.Body += scanner.Text()
 			}
-			entry.Body += scanner.Text()
-		}
 
-		// Add the entry to the entries
-		journal.Entries = append(journal.Entries, entry)
-	}
+			// Add the entry to the entries
+			journal.Entries = append(journal.Entries, entry)
+		}
+	*/
+	var journal Journal
+	yaml.Unmarshal(raw, &journal)
 	return &journal, nil
 }
 
@@ -100,7 +119,7 @@ func main() {
 	http.HandleFunc("/"+rootPath+"/", viewHandler)
 	http.HandleFunc("/edit/", editHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8081", nil)
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, j *Journal) {
