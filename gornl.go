@@ -16,8 +16,8 @@ var (
 		"tmpl/edit.html",
 		"tmpl/view.html"))
 	rootPath      = "journal"
-	splitSentence = regexp.MustCompile("^(.*?[.?!])\\s*(.*)$")
-	validPath     = regexp.MustCompile(("^/" + rootPath + "/(?:save/)?(\\w{1,20})$"))
+	regexSentence = regexp.MustCompile("^(.*?[.?!])\\s*(.*)$")
+	regexUrl      = regexp.MustCompile(("^/" + rootPath + "/(save|view)/(\\w{1,20})$"))
 )
 
 func main() {
@@ -26,9 +26,8 @@ func main() {
 	viper.SetDefault("ServerPort", "8080")
 	viper.SetDefault("ServerPath", "journal")
 
-	http.HandleFunc("/"+rootPath+"/save/", saveHandler)
 	http.HandleFunc("/"+rootPath+"/", viewHandler)
-	http.HandleFunc("/edit/", editHandler)
+	http.Handle("/test/", journalHandler{nil})
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.ListenAndServe(":8080", nil)
 }
@@ -78,7 +77,7 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	split := splitSentence.FindStringSubmatch(r.FormValue("body"))
+	split := regexSentence.FindStringSubmatch(r.FormValue("body"))
 
 	entry := Entry{time.Now(), split[1], split[2]}
 
@@ -89,11 +88,22 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/"+rootPath+"/"+name, http.StatusFound)
 }
 
+func parseUrl(r *http.Request) (string, string, error) {
+	matches := regexSentence.FindStringSubmatch(r.URL.Path)
+	if len(matches) != 2 {
+		return "", "", errors.New("Invalid URL")
+	}
+	method := matches[1]
+	name := matches[2]
+
+	return method, name, nil
+}
+
 func getName(w http.ResponseWriter, r *http.Request) (string, error) {
-	m := validPath.FindStringSubmatch(r.URL.Path)
+	m := regexUrl.FindStringSubmatch(r.URL.Path)
 	if m == nil {
 		http.NotFound(w, r)
 		return "", errors.New("Invalid Journal Name")
 	}
-	return m[1], nil
+	return m[2], nil
 }
