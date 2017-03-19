@@ -17,7 +17,7 @@ var (
 		"tmpl/view.html"))
 	rootPath      = "journal"
 	regexSentence = regexp.MustCompile("^(.*?[.?!])\\s*(.*)$")
-	regexUrl      = regexp.MustCompile(("^/" + rootPath + "/(save|view)/(\\w{1,20})$"))
+	regexUrl      = regexp.MustCompile(("^/" + rootPath + "/(save|view|test)/(\\w{1,20})$"))
 )
 
 func main() {
@@ -25,9 +25,11 @@ func main() {
 	viper.SetConfigName("gornl")
 	viper.SetDefault("ServerPort", "8080")
 	viper.SetDefault("ServerPath", "journal")
+	viper.SetDefault("JournalPath", "journals")
 
-	http.HandleFunc("/"+rootPath+"/", viewHandler)
-	http.Handle("/test/", journalHandler{nil})
+	journals := JournalDB{make(map[string]*Journal)}
+
+	http.Handle("/"+rootPath+"/", journalHandler{&journals})
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.ListenAndServe(":8080", nil)
 }
@@ -39,16 +41,7 @@ func renderTemplate(w http.ResponseWriter, tmpl string, j *Journal) {
 	}
 }
 
-func viewHandler(w http.ResponseWriter, r *http.Request) {
-	name, err := getName(w, r)
-	if err != nil {
-		return
-	}
-	j, err := loadJournal(name)
-	if err != nil {
-		http.Redirect(w, r, "/edit/"+name, http.StatusFound)
-		return
-	}
+func viewHandler(w http.ResponseWriter, r *http.Request, j *Journal) {
 	renderTemplate(w, "view", j)
 }
 
@@ -89,8 +82,8 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func parseUrl(r *http.Request) (string, string, error) {
-	matches := regexSentence.FindStringSubmatch(r.URL.Path)
-	if len(matches) != 2 {
+	matches := regexUrl.FindStringSubmatch(r.URL.Path)
+	if len(matches) != 3 {
 		return "", "", errors.New("Invalid URL")
 	}
 	method := matches[1]

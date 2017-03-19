@@ -89,3 +89,27 @@ func loadJournal(name string) (*Journal, error) {
 	}
 	return &journal, nil
 }
+
+type JournalDB struct {
+	journals map[string]*Journal
+}
+
+func (db *JournalDB) Get(name string) (Journal, error) {
+	// If the journal is already in our "database", send it by value
+	if journal, open := db.journals[name]; open {
+		return *journal, nil
+	}
+	// or we need to open it, then send it
+	journal, err := loadJournal(name)
+	if err != nil {
+		return Journal{}, err
+	}
+
+	db.journals[name] = journal
+
+	return *journal, nil
+}
+
+func (db *JournalDB) load(name string) {
+	return
+}
