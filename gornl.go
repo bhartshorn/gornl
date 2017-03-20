@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 	"html/template"
 	"net/http"
 )
@@ -26,7 +27,7 @@ func main() {
 
 	http.Handle("/"+rootPath+"/", journalHandler{&journals})
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8081", nil)
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, j *Journal) {
