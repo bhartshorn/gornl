@@ -4,7 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"time"
+	"regexp"
 )
 
 var (
@@ -23,22 +23,21 @@ func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	journal, err := h.journals.Get(name)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-	}
-
 	switch method {
 	case "view":
+		journal, err := h.journals.Get(name)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
 		viewHandler(w, r, &journal)
-		return
 	case "save":
-		split := regexSentence.FindStringSubmatch(r.FormValue("body"))
-		entry := Entry{time.Now(), split[1], split[2]}
-		journal.Entries = append(journal.Entries, entry)
-		h.journals.Put(journal)
+		err := h.journals.Add(name, r.FormValue("body"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		http.Redirect(w, r, "/"+rootPath+"/view/"+name, http.StatusFound)
-		return
 	}
 	log.Println("You want to " + method + " the journal " + name)
 	return

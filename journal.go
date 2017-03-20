@@ -98,19 +98,24 @@ type JournalDB struct {
 }
 
 func (db *JournalDB) Get(name string) (Journal, error) {
+	journal, err := db.get(name)
+	return *journal, err
+}
+
+func (db *JournalDB) get(name string) (*Journal, error) {
 	// If the journal is already in our "database", send it by value
 	if journal, open := db.journals[name]; open {
-		return *journal, nil
+		return journal, nil
 	}
 	// or we need to open it, then send it
 	journal, err := loadJournal(name)
 	if err != nil {
-		return Journal{}, err
+		return &Journal{}, err
 	}
 
 	db.journals[name] = journal
 
-	return *journal, nil
+	return journal, nil
 }
 
 func (db *JournalDB) Put(journal Journal) error {
@@ -119,6 +124,18 @@ func (db *JournalDB) Put(journal Journal) error {
 	db.journals[journal.Name].Save()
 	db.mu.Unlock()
 	return nil
+}
+
+func (db *JournalDB) Add(name string, rawEntry string) error {
+	journal, err := db.get(name)
+	split := regexSentence.FindStringSubmatch(rawEntry)
+	entry := Entry{time.Now(), split[1], split[2]}
+	db.mu.Lock()
+	journal.Entries = append(journal.Entries, entry)
+	journal.Save()
+	db.mu.Unlock()
+
+	return err
 }
 
 func (db *JournalDB) load(name string) {

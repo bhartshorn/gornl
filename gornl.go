@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/viper"
 	"html/template"
 	"net/http"
-	"regexp"
 )
 
 var (
