@@ -13,9 +13,7 @@ var (
 		"tmpl/footer.html",
 		"tmpl/edit.html",
 		"tmpl/view.html"))
-	rootPath      = "journal"
-	regexSentence = regexp.MustCompile("^(.*?[.?!])\\s*(.*)$")
-	regexUrl      = regexp.MustCompile(("^/" + rootPath + "/(save|view|test)/(\\w{1,20})$"))
+	rootPath = "journal"
 )
 
 func main() {

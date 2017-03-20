@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	regexUser = regexp.MustCompile("^username: (.{1,32})$")
-	regexPass = regexp.MustCompile("^password: (.{1,32})$")
+	regexUser     = regexp.MustCompile("^username: (.{1,32})$")
+	regexPass     = regexp.MustCompile("^password: (.{1,32})$")
+	regexSentence = regexp.MustCompile("^(.*?[.?!])\\s*(.*)$")
 )
 
 type Entry struct {

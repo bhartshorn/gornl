@@ -4,6 +4,11 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"time"
+)
+
+var (
+	regexUrl = regexp.MustCompile(("^/" + rootPath + "/(save|view|test)/(\\w{1,20})$"))
 )
 
 type journalHandler struct {
@@ -26,8 +31,14 @@ func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch method {
 	case "view":
 		viewHandler(w, r, &journal)
+		return
 	case "save":
-		saveHandler(w, r, &journal)
+		split := regexSentence.FindStringSubmatch(r.FormValue("body"))
+		entry := Entry{time.Now(), split[1], split[2]}
+		journal.Entries = append(journal.Entries, entry)
+		h.journals.Put(journal)
+		http.Redirect(w, r, "/"+rootPath+"/view/"+name, http.StatusFound)
+		return
 	}
 	log.Println("You want to " + method + " the journal " + name)
 	return
