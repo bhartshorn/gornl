@@ -23,13 +23,24 @@ func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	journal, err := h.journals.Get(name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		log.Println("Can't find journal \"" + name + "\"")
+		return
+	}
+
+	user, pass, hasAuth := r.BasicAuth()
+
+	if !hasAuth || user != journal.Username || pass != journal.Password {
+		w.Header().Set("WWW-Authenticate", "Basic realm="+name)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		log.Println("Unauthorized access attempt to " + name)
+		return
+	}
+
 	switch method {
 	case "view":
-		journal, err := h.journals.Get(name)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
 		viewHandler(w, r, &journal)
 	case "save":
 		err := h.journals.Add(name, r.FormValue("body"))
