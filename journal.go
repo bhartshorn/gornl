@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"sync"
 	"time"
 )
 
@@ -91,6 +92,7 @@ func loadJournal(name string) (*Journal, error) {
 }
 
 type JournalDB struct {
+	mu       sync.Mutex
 	journals map[string]*Journal
 }
 
@@ -110,6 +112,20 @@ func (db *JournalDB) Get(name string) (Journal, error) {
 	return *journal, nil
 }
 
+func (db *JournalDB) Put(journal Journal) error {
+	db.mu.Lock()
+	db.journals[journal.Name] = &journal
+	db.journals[journal.Name].Save()
+	db.mu.Unlock()
+	return nil
+}
+
 func (db *JournalDB) load(name string) {
 	return
+}
+
+func newJournalDB() JournalDB {
+	return JournalDB{
+		journals: make(map[string]*Journal),
+	}
 }
