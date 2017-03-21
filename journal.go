@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 	"regexp"
@@ -34,7 +36,7 @@ type Journal struct {
 }
 
 func (j *Journal) Save() error {
-	file, err := os.Create("journals/" + j.Name + ".txt")
+	file, err := os.Create(viper.GetString("JournalPath") + "/" + j.Name + ".txt")
 	log.Println("---- Opening " + j.Name + ".txt ----")
 	if err != nil {
 		log.Println(err)
@@ -54,7 +56,7 @@ func (j *Journal) Save() error {
 }
 
 func loadJournal(name string) (*Journal, error) {
-	file, err := os.Open("journals/" + name + ".txt")
+	file, err := os.Open(viper.GetString("JournalPath") + "/" + name + ".txt")
 	if err != nil {
 		return &Journal{}, err
 	}
@@ -129,6 +131,9 @@ func (db *JournalDB) Put(journal Journal) error {
 func (db *JournalDB) Add(name string, rawEntry string) error {
 	journal, err := db.get(name)
 	split := regexSentence.FindStringSubmatch(rawEntry)
+	if len(split) != 3 {
+		return errors.New("Couldn't parse entry text")
+	}
 	entry := Entry{time.Now(), split[1], split[2]}
 	db.mu.Lock()
 	journal.Entries = append(journal.Entries, entry)

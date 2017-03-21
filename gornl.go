@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v2"
 	"html/template"
 	"net/http"
 )
@@ -16,13 +15,15 @@ var (
 	rootPath = "journal"
 )
 
-func main() {
+func init() {
 	viper.AddConfigPath("config")
 	viper.SetConfigName("gornl")
 	viper.SetDefault("ServerPort", "8080")
 	viper.SetDefault("ServerPath", "journal")
 	viper.SetDefault("JournalPath", "journals")
+}
 
+func main() {
 	journals := newJournalDB()
 
 	http.Handle("/"+viper.GetString("ServerPath")+"/", journalHandler{&journals})
