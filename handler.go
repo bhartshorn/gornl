@@ -2,13 +2,14 @@ package main
 
 import (
 	"errors"
+	"github.com/spf13/viper"
 	"log"
 	"net/http"
 	"regexp"
 )
 
 var (
-	regexUrl = regexp.MustCompile(("^/" + rootPath + "/(save|view|test)/(\\w{1,20})$"))
+	regexUrl = regexp.MustCompile(("^/" + viper.GetString("ServerPath") + "/(save|view|test)/(\\w{1,20})$"))
 )
 
 type journalHandler struct {
@@ -37,7 +38,7 @@ func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http.Redirect(w, r, "/"+rootPath+"/view/"+name, http.StatusFound)
+		http.Redirect(w, r, "/"+viper.GetString("ServerPath")+"/view/"+name, http.StatusFound)
 	}
 	log.Println("You want to " + method + " the journal " + name)
 	return
