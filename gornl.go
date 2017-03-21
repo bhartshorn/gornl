@@ -19,16 +19,20 @@ func init() {
 	viper.AddConfigPath("config")
 	viper.SetConfigName("gornl")
 	viper.SetDefault("ServerPort", "8080")
-	viper.SetDefault("ServerPath", "journal")
+	viper.SetDefault("ServerPrefix", "journal")
 	viper.SetDefault("JournalPath", "journals")
 }
 
 func main() {
 	journals := newJournalDB()
 
-	http.Handle("/"+viper.GetString("ServerPath")+"/", journalHandler{&journals})
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	http.ListenAndServe(":"+viper.GetString("ServerPort"), nil)
+	prefix := "/" + viper.GetString("ServerPrefix") + "/"
+	port := ":" + viper.GetString("ServerPort")
+
+	http.Handle(prefix, journalHandler{&journals})
+	http.Handle(prefix+"static/",
+		http.StripPrefix(prefix+"static/", http.FileServer(http.Dir("static"))))
+	http.ListenAndServe(port, nil)
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, j *Journal) {

@@ -15,7 +15,7 @@ var (
 func init() {
 	// This is an ugly hack. Not sure how to do it better as of now, but I
 	// have to set this variable here to get the viper variable.
-	regexUrl = regexp.MustCompile(("^/" + viper.GetString("ServerPath") + "/(save|view|test)/(\\w{1,20})$"))
+	regexUrl = regexp.MustCompile(("^/" + viper.GetString("ServerPrefix") + "/(save|view|test)/(\\w{1,20})$"))
 }
 
 type journalHandler struct {
@@ -24,11 +24,11 @@ type journalHandler struct {
 
 func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	method, name, err := parseUrl(r)
+	prefix := "/" + viper.GetString("ServerPrefix")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Println("Bad URL: " + r.URL.Path)
 		log.Println(regexUrl.String())
-		log.Println(viper.GetString("ServerPath"))
 		return
 	}
 
@@ -46,7 +46,7 @@ func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http.Redirect(w, r, "/"+viper.GetString("ServerPath")+"/view/"+name, http.StatusFound)
+		http.Redirect(w, r, prefix+"view/"+name, http.StatusFound)
 	}
 	log.Println("You want to " + method + " the journal " + name)
 	return
