@@ -25,9 +25,9 @@ func main() {
 
 	journals := newJournalDB()
 
-	http.Handle("/"+rootPath+"/", journalHandler{&journals})
+	http.Handle("/"+viper.GetString("ServerPath")+"/", journalHandler{&journals})
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	http.ListenAndServe(":8081", nil)
+	http.ListenAndServe(":"+viper.GetString("ServerPort"), nil)
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, j *Journal) {
