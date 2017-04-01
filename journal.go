@@ -14,7 +14,7 @@ import (
 
 var (
 	regexUser     = regexp.MustCompile("^username: (.{1,32})$")
-	regexPass     = regexp.MustCompile("^password: (.{1,32})$")
+	regexPass     = regexp.MustCompile("^password: (.*)$")
 	regexSentence = regexp.MustCompile("^(.*?[.?!])\\s*(.*)$")
 )
 
@@ -137,6 +137,16 @@ func (db *JournalDB) Add(name string, rawEntry string) error {
 	entry := Entry{time.Now(), split[1], split[2]}
 	db.mu.Lock()
 	journal.Entries = append(journal.Entries, entry)
+	journal.Save()
+	db.mu.Unlock()
+
+	return err
+}
+
+func (db *JournalDB) ChangePass(name string, pass string) error {
+	journal, err := db.get(name)
+	journal.Password = pass
+	db.mu.Lock()
 	journal.Save()
 	db.mu.Unlock()
 

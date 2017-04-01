@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"github.com/spf13/viper"
+	"gopkg.in/hlandau/passlib.v1"
 	"log"
 	"net/http"
 	"regexp"
@@ -33,13 +34,37 @@ func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	journal, err := h.journals.Get(name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	user, pass, hasAuth := r.BasicAuth()
+	if !hasAuth {
+		log.Println("Requesting auth for journal " + name)
+		w.Header().Set("WWW-Authenticate", "Basic realm="+name+"\"")
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	// Ewwww... code duplication. I'm sorry, Mr Torvalds... code smell
+	newHash, authErr := passlib.Verify(pass, journal.Password)
+
+	if !hasAuth || user != journal.Username || authErr != nil {
+		log.Println("Unauthorized access attempt to " + name)
+		w.Header().Set("WWW-Authenticate", "Basic realm="+name+"\"")
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	if newHash != "" {
+		h.journals.ChangePass(name, newHash)
+		log.Println("Pass changed")
+	}
+
 	switch method {
 	case "view":
-		journal, err := h.journals.Get(name)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
 		viewHandler(w, r, &journal)
 	case "save":
 		r.ParseForm()
@@ -55,7 +80,16 @@ func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			http.Redirect(w, r, prefix+"/view/"+name, http.StatusFound)
 		case "Change Password":
-			log.Println("You want to change your password?")
+			if r.FormValue("password") != r.FormValue("confirm") {
+				http.Error(w, "Passwords did not match!", http.StatusInternalServerError)
+				return
+			}
+			encPass, err := passlib.Hash(r.FormValue("password"))
+			if err != nil {
+				http.Error(w, "Could not hash password", http.StatusInternalServerError)
+			}
+			h.journals.ChangePass(name, encPass)
+			log.Println("New password: " + r.FormValue("password") + " : " + encPass)
 		}
 
 		http.Redirect(w, r, prefix+"/view/"+name, http.StatusFound)
