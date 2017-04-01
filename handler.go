@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
 )
 
 var (
@@ -41,12 +42,23 @@ func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		viewHandler(w, r, &journal)
 	case "save":
-		err := h.journals.Add(name, r.FormValue("body"))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		r.ParseForm()
+		for k, v := range r.Form {
+			log.Println(k + ": " + strings.Join(v, ""))
 		}
-		http.Redirect(w, r, prefix+"view/"+name, http.StatusFound)
+		switch r.FormValue("submit") {
+		case "Save Entry":
+			err := h.journals.Add(name, r.FormValue("body"))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			http.Redirect(w, r, prefix+"/view/"+name, http.StatusFound)
+		case "Change Password":
+			log.Println("You want to change your password?")
+		}
+
+		http.Redirect(w, r, prefix+"/view/"+name, http.StatusFound)
 	}
 	log.Println("You want to " + method + " the journal " + name)
 	return

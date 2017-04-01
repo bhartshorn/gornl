@@ -4,7 +4,7 @@
 		<form action="../save/{{.Name}}" method="POST">
 			<label for="body">New Entry Body:</label>
 			<textarea name="body" rows="20" cols="80"></textarea><br />
-			<input type="submit" name="submit" value="Save" />
+			<input name="submit" type="submit" value="Save Entry" />
 		</form> 
 
 		{{range .Entries}}
@@ -13,5 +13,12 @@
 		<p>{{.Body}}</p>
 		{{end}}
 		<hr />
+		<form action="../save/{{.Name}}" method="POST">
+			<label for="password">New Password:</label>
+			<input type="password" name="password" /><br />
+			<label for="confirm">Confirm Password:</label>
+			<input type="password" name="confirm" /><br />
+			<input name="submit" type="submit" value="Change Password">
+		</form>
 	</body>
 {{ template "footer.html" . }}
