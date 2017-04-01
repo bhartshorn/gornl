@@ -48,9 +48,9 @@ func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ewwww... code duplication. I'm sorry, Mr Torvalds... code smell
 	newHash, authErr := passlib.Verify(pass, journal.Password)
 
+	// Ewwww... code duplication. I'm sorry, Mr Torvalds... code smell
 	if !hasAuth || user != journal.Username || authErr != nil {
 		log.Println("Unauthorized access attempt to " + name)
 		w.Header().Set("WWW-Authenticate", "Basic realm="+name+"\"")

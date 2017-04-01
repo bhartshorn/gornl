@@ -13,12 +13,15 @@
 		<p>{{.Body}}</p>
 		{{end}}
 		<hr />
-		<form action="../save/{{.Name}}" method="POST">
-			<label for="password">New Password:</label>
-			<input type="password" name="password" /><br />
-			<label for="confirm">Confirm Password:</label>
-			<input type="password" name="confirm" /><br />
-			<input name="submit" type="submit" value="Change Password">
-		</form>
+		<br />
+		<div id="sidebar">
+			<form action="../save/{{.Name}}" method="POST" id="changepass">
+				<label for="password">New Password:</label>
+				<input type="password" name="password" /><br />
+				<label for="confirm">Confirm Password:</label>
+				<input type="password" name="confirm" /><br />
+				<input name="submit" type="submit" value="Change Password">
+			</form>
+		</div>
 	</body>
 {{ template "footer.html" . }}
