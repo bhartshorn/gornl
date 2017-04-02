@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	regexUser     = regexp.MustCompile("^username: (.{1,32})$")
 	regexPass     = regexp.MustCompile("^password: (.*)$")
 	regexSentence = regexp.MustCompile("^(.*?[.?!])\\s*(.*)$")
 )
@@ -31,7 +30,6 @@ func (e Entry) String() string {
 type Journal struct {
 	Name     string
 	Entries  []Entry
-	Username string
 	Password string
 }
 
@@ -44,54 +42,15 @@ func (j *Journal) Save() error {
 	}
 	defer file.Close()
 
-	file.WriteString(fmt.Sprintf("username: %s\n", j.Username))
-	file.WriteString(fmt.Sprintf("password: %s\n", j.Password))
+	file.WriteString("password: " + j.Password)
 	for _, entry := range j.Entries {
-		n, err := file.WriteString(entry.String())
-		file.WriteString("\n\n")
-		log.Printf("Wrote %d bytes. Err: %s\n", n, err)
+		_, err := file.WriteString(entry.String() + "\n\n")
+		if err != nil {
+			return err
+		}
 	}
 	file.Sync()
 	return nil
-}
-
-func loadJournal(name string) (*Journal, error) {
-	file, err := os.Open(viper.GetString("JournalPath") + "/" + name + ".txt")
-	if err != nil {
-		return &Journal{}, err
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	journal := Journal{Name: name}
-
-	scanner.Scan()
-	journal.Username = regexUser.FindStringSubmatch(scanner.Text())[1]
-
-	scanner.Scan()
-	journal.Password = regexPass.FindStringSubmatch(scanner.Text())[1]
-
-	// While Scanner can open a new line
-	for scanner.Scan() {
-		// At the beginning of this loop, should always be the beginning of an entry
-		entry := Entry{}
-
-		entry.Date, err = time.Parse("2006-01-02 15:04", scanner.Text()[0:16])
-		entry.Title = scanner.Text()[17:len(scanner.Text())]
-
-		// We got the date & title, now get the body. It may be on
-		// multiple lines.
-		for scanner.Scan() && len(scanner.Text()) != 0 {
-			// If it is in multiple lines, we will probably need to add a space
-			if len(entry.Body) > 0 {
-				entry.Body += " "
-			}
-			entry.Body += scanner.Text()
-		}
-
-		// Add the entry to the entries
-		journal.Entries = append(journal.Entries, entry)
-	}
-	return &journal, nil
 }
 
 type JournalDB struct {
@@ -109,15 +68,70 @@ func (db *JournalDB) get(name string) (*Journal, error) {
 	if journal, open := db.journals[name]; open {
 		return journal, nil
 	}
+
 	// or we need to open it, then send it
-	journal, err := loadJournal(name)
+	err := db.loadJournal(name)
 	if err != nil {
 		return &Journal{}, err
 	}
 
-	db.journals[name] = journal
+	if journal, open := db.journals[name]; open {
+		return journal, nil
+	}
 
-	return journal, nil
+	return &Journal{}, nil
+}
+
+func (db *JournalDB) loadJournal(name string) error {
+	file, err := os.Open(viper.GetString("JournalPath") + "/" + name + ".txt")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	journal := Journal{Name: name}
+
+	scanner.Scan()
+	journal.Password = regexPass.FindStringSubmatch(scanner.Text())[1]
+	if len(journal.Password) == 0 {
+		return errors.New("Journal password is empty")
+	}
+
+	// While Scanner can open a new line
+	for scanner.Scan() {
+		// At the beginning of this loop, should always be the beginning of an entry
+		entry := Entry{}
+
+		entry.Date, err = time.Parse("2006-01-02 15:04", scanner.Text()[0:16])
+		if err != nil {
+			return errors.New("Issue parsing date in entry")
+		}
+		entry.Title = scanner.Text()[17:len(scanner.Text())]
+		if len(entry.Title) == 0 {
+			return errors.New("Title of entry is empty")
+		}
+
+		// We got the date & title, now get the body. It may be on
+		// multiple lines.
+		for scanner.Scan() && len(scanner.Text()) != 0 {
+			// If it is in multiple lines, we will probably need to add a space
+			if len(entry.Body) > 0 {
+				entry.Body += " "
+			}
+			entry.Body += scanner.Text()
+		}
+
+		if len(entry.Body) == 0 {
+			return errors.New("Entry body is empty")
+		}
+
+		// Add the entry to the entries
+		journal.Entries = append(journal.Entries, entry)
+	}
+
+	db.journals[name] = &journal
+	return nil
 }
 
 func (db *JournalDB) Put(journal Journal) error {

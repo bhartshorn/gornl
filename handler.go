@@ -40,7 +40,7 @@ func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, pass, hasAuth := r.BasicAuth()
+	_, pass, hasAuth := r.BasicAuth()
 	if !hasAuth {
 		log.Println("Requesting auth for journal " + name)
 		w.Header().Set("WWW-Authenticate", "Basic realm="+name+"\"")
@@ -51,7 +51,7 @@ func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	newHash, authErr := passlib.Verify(pass, journal.Password)
 
 	// Ewwww... code duplication. I'm sorry, Mr Torvalds... code smell
-	if !hasAuth || user != journal.Username || authErr != nil {
+	if !hasAuth || authErr != nil {
 		log.Println("Unauthorized access attempt to " + name)
 		w.Header().Set("WWW-Authenticate", "Basic realm="+name+"\"")
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
