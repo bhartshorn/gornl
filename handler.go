@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"github.com/spf13/viper"
 	"gopkg.in/hlandau/passlib.v1"
 	"log"
@@ -65,7 +65,7 @@ func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch method {
 	case "view":
-		viewHandler(w, r, &journal)
+		renderTemplate(w, "view", &journal)
 	case "save":
 		r.ParseForm()
 		for k, v := range r.Form {
@@ -98,20 +98,10 @@ func (h journalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func viewHandler(w http.ResponseWriter, r *http.Request, j *Journal) {
-	renderTemplate(w, "view", j)
-}
-
-func editHandler(w http.ResponseWriter, r *http.Request) {
-}
-
-func saveHandler(w http.ResponseWriter, r *http.Request) {
-}
-
 func parseUrl(r *http.Request) (string, string, error) {
 	matches := regexUrl.FindStringSubmatch(r.URL.Path)
 	if len(matches) != 3 {
-		return "", "", errors.New("Invalid URL")
+		return "", "", fmt.Errorf("Invalid URL")
 	}
 	method := matches[1]
 	name := matches[2]

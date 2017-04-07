@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"github.com/spf13/viper"
 	"log"
@@ -35,6 +34,7 @@ type Journal struct {
 
 func (j *Journal) Save() error {
 	file, err := os.Create(viper.GetString("JournalPath") + "/" + j.Name + ".txt")
+	defer file.Sync()
 	log.Println("---- Opening " + j.Name + ".txt ----")
 	if err != nil {
 		log.Println(err)
@@ -49,7 +49,6 @@ func (j *Journal) Save() error {
 			return err
 		}
 	}
-	file.Sync()
 	return nil
 }
 
@@ -95,7 +94,7 @@ func (db *JournalDB) loadJournal(name string) error {
 	scanner.Scan()
 	journal.Password = regexPass.FindStringSubmatch(scanner.Text())[1]
 	if len(journal.Password) == 0 {
-		return errors.New("Journal password is empty")
+		return fmt.Errorf("Journal password is empty")
 	}
 
 	// While Scanner can open a new line
@@ -105,11 +104,11 @@ func (db *JournalDB) loadJournal(name string) error {
 
 		entry.Date, err = time.Parse("2006-01-02 15:04", scanner.Text()[0:16])
 		if err != nil {
-			return errors.New("Issue parsing date in entry")
+			return fmt.Errorf("Issue parsing date in entry")
 		}
 		entry.Title = scanner.Text()[17:len(scanner.Text())]
 		if len(entry.Title) == 0 {
-			return errors.New("Title of entry is empty")
+			return fmt.Errorf("Title of entry is empty")
 		}
 
 		// We got the date & title, now get the body. It may be on
@@ -123,7 +122,7 @@ func (db *JournalDB) loadJournal(name string) error {
 		}
 
 		if len(entry.Body) == 0 {
-			return errors.New("Entry body is empty")
+			return fmt.Errorf("Entry body is empty")
 		}
 
 		// Add the entry to the entries
@@ -146,7 +145,7 @@ func (db *JournalDB) Add(name string, rawEntry string) error {
 	journal, err := db.get(name)
 	split := regexSentence.FindStringSubmatch(rawEntry)
 	if len(split) != 3 {
-		return errors.New("Couldn't parse entry text")
+		return fmt.Errorf("Couldn't parse entry text")
 	}
 	entry := Entry{time.Now(), split[1], split[2]}
 	db.mu.Lock()
